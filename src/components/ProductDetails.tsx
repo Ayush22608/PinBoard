@@ -18,6 +18,20 @@ export const ProductDetails: React.FC = () => {
     );
   }
 
+  const handleAddToCart = () => {
+    dispatch({
+      type: 'ADD_ITEM',
+      payload: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        description: product.description,
+        quantity: 1
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pt-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -43,7 +57,7 @@ export const ProductDetails: React.FC = () => {
               </span>
             </div>
             <button
-              onClick={() => dispatch({ type: 'ADD_ITEM', payload: product })}
+              onClick={handleAddToCart}
               className="w-full bg-gray-900 text-white py-3 px-4 rounded-md hover:bg-gray-800 transition-colors"
             >
               Add to Cart
