@@ -4,14 +4,14 @@ import { ShoppingCart, Menu, X, Search, User, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSearch } from '../context/SearchContext';
 import { auth } from '../config/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const { state: cartState } = useCart();
   const { setSearchQuery: searchDispatch } = useSearch();
   const location = useLocation();
@@ -24,7 +24,7 @@ const Navbar: React.FC = () => {
 
   // Listen to auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
       setCurrentUser(user);
     });
 

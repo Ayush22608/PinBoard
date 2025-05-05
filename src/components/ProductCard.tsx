@@ -8,7 +8,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { dispatch } = useCart();
+  const { dispatch, addToCart } = useCart();
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:scale-102 hover:shadow-xl">
@@ -30,7 +30,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="flex items-center justify-between">
           <span className="text-2xl font-bold text-gray-900">${product.price}</span>
           <button
-            onClick={() => dispatch({ type: 'ADD_TO_CART', payload: product })}
+            onClick={() => addToCart(product, 1)}
             className="bg-black text-white px-6 py-3 rounded-lg flex items-center space-x-2 hover:bg-gray-800 transition-colors"
           >
             <ShoppingCart className="h-5 w-5" />

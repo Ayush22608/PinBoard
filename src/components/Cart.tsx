@@ -3,7 +3,7 @@ import { useCart } from '../context/CartContext';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 
 export const Cart: React.FC = () => {
-  const { state, dispatch } = useCart();
+  const { state, dispatch, removeFromCart } = useCart();
 
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity < 1) return;
@@ -49,7 +49,7 @@ export const Cart: React.FC = () => {
               </button>
             </div>
             <button
-              onClick={() => dispatch({ type: 'REMOVE_FROM_CART', payload: item.id })}
+              onClick={() => removeFromCart(item.id)}
               className="text-red-500 hover:text-red-700"
             >
               <Trash2 className="h-5 w-5" />
