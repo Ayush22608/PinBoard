@@ -1,0 +1,9 @@
+:root {
+  --color-bg-primary: #f8f9fa;
+  --color-bg-secondary: #ffffff;
+  --color-accent-1: #6366f1;
+  --color-accent-2: #8b5cf6;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #4b5563;
+  --color-overlay: rgba(31, 41, 55, 0.7);
+}

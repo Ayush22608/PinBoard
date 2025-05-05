@@ -42,34 +42,26 @@ export const products: Product[] = [
   },
   {
     id: '5',
-    name: 'The Godfather',
-    description: 'Iconic movie poster',
+    name: 'Pulp Fiction',
+    description: 'Iconic Tarantino movie poster',
     price: 400,
-    image: '/posters/The Godfather.jpeg',
+    image: '/posters/Pulp fiction.jpeg',
     category: 'movies'
   },
   {
     id: '6',
-    name: 'Breaking Bad',
-    description: 'Award-winning TV series poster',
+    name: 'The Secret Life of Walter Mitty',
+    description: 'Adventure drama movie poster',
     price: 450,
-    image: '/posters/Breaking Bad.jpeg',
-    category: 'tv-shows'
+    image: '/posters/The secret life of walter mitty.jpeg',
+    category: 'movies'
   },
   {
     id: '7',
-    name: 'Death Note',
-    description: 'Popular anime series poster',
+    name: 'Oppenheimer',
+    description: 'Christopher Nolan movie poster',
     price: 400,
-    image: '/posters/Death Note.jpeg',
-    category: 'anime'
-  },
-  {
-    id: '8',
-    name: 'Attack on Titan',
-    description: 'Action-packed anime poster',
-    price: 450,
-    image: '/posters/Attack on Titan.jpeg',
-    category: 'anime'
+    image: '/posters/Oppenheimer.jpeg',
+    category: 'movies'
   }
 ];
