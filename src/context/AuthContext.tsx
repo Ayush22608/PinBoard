@@ -1,72 +1,128 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut as firebaseSignOut,
+  User as FirebaseUser
+} from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
-interface User {
+interface UserProfile {
+  id: string;
   email: string;
-  uid: string;
+  name: string;
+  role: 'user' | 'admin';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface AuthContextType {
-  currentUser: User | null;
-  signup: (email: string, password: string) => Promise<void>;
+  user: UserProfile | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const auth = getAuth();
 
-  const signup = async (email: string, password: string) => {
-    // Mock signup - just create a user object
-    const user: User = {
-      email,
-      uid: Math.random().toString(36).substring(7)
-    };
-    setCurrentUser(user);
-  };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Get user profile from Firestore
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUser({
+            id: firebaseUser.uid,
+            email: firebaseUser.email!,
+            name: userData.name,
+            role: userData.role || (firebaseUser.email === 'admin@pinboard.com' ? 'admin' : 'user'),
+            createdAt: userData.createdAt.toDate(),
+            updatedAt: userData.updatedAt.toDate()
+          });
+        } else {
+          // Create new user profile if it doesn't exist
+          const newUser: UserProfile = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email!,
+            name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
+            role: firebaseUser.email === 'admin@pinboard.com' ? 'admin' : 'user',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+          setUser(newUser);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
-    // Mock login - just create a user object
-    const user: User = {
-      email,
-      uid: Math.random().toString(36).substring(7)
-    };
-    setCurrentUser(user);
+    await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const logout = async () => {
-    setCurrentUser(null);
+  const signup = async (email: string, password: string, name: string) => {
+    const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
+    const newUser: UserProfile = {
+      id: firebaseUser.uid,
+      email: firebaseUser.email!,
+      name,
+      role: email === 'admin@pinboard.com' ? 'admin' : 'user',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
   };
 
   const signInWithGoogle = async () => {
-    // Mock Google sign in
-    const user: User = {
-      email: 'demo@google.com',
-      uid: Math.random().toString(36).substring(7)
-    };
-    setCurrentUser(user);
+    const provider = new GoogleAuthProvider();
+    const { user: firebaseUser } = await signInWithPopup(auth, provider);
+    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+    
+    if (!userDoc.exists()) {
+      const newUser: UserProfile = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email!,
+        name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
+        role: firebaseUser.email === 'admin@pinboard.com' ? 'admin' : 'user',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+    }
   };
 
-  const value = {
-    currentUser,
-    signup,
-    login,
-    logout,
-    signInWithGoogle
+  const signOut = async () => {
+    await firebaseSignOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, signup, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

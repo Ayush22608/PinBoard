@@ -1,0 +1,121 @@
+services:
+  # Backend API Service
+  - type: web
+    name: poster-website-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run server
+    healthCheckPath: /test
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false # This should be set manually in the Render dashboard for security
+      - key: JWT_SECRET
+        sync: false # This should be set manually in the Render dashboard for security
+      - key: FRONTEND_URL
+        value: https://your-poster-website.vercel.app
+      - key: JWT_EXPIRES_IN
+        value: 7d
+
+  # Scheduled Sync Job
+  - type: cron
+    name: poster-website-sync
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node schedule-sync.js
+    schedule: "0 * * * *" # Run hourly
+    envVars:
+      - key: RUN_AS_SCHEDULED_JOB
+        value: "true"
+      - key: SYNC_INTERVAL
+        value: "3600000"
+      - key: MONGODB_URI
+        sync: false # This should be set manually in the Render dashboard for security 
+ 
+ 
+  # Backend API Service
+  - type: web
+    name: poster-website-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run server
+    healthCheckPath: /test
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false # This should be set manually in the Render dashboard for security
+      - key: JWT_SECRET
+        sync: false # This should be set manually in the Render dashboard for security
+      - key: FRONTEND_URL
+        value: https://your-poster-website.vercel.app
+      - key: JWT_EXPIRES_IN
+        value: 7d
+
+  # Scheduled Sync Job
+  - type: cron
+    name: poster-website-sync
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node schedule-sync.js
+    schedule: "0 * * * *" # Run hourly
+    envVars:
+      - key: RUN_AS_SCHEDULED_JOB
+        value: "true"
+      - key: SYNC_INTERVAL
+        value: "3600000"
+      - key: MONGODB_URI
+        sync: false # This should be set manually in the Render dashboard for security 
+ 
+ 
+  # Backend API Service
+  - type: web
+    name: poster-website-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run server
+    healthCheckPath: /test
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false # This should be set manually in the Render dashboard for security
+      - key: JWT_SECRET
+        sync: false # This should be set manually in the Render dashboard for security
+      - key: FRONTEND_URL
+        value: https://your-poster-website.vercel.app
+      - key: JWT_EXPIRES_IN
+        value: 7d
+
+  # Scheduled Sync Job
+  - type: cron
+    name: poster-website-sync
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node schedule-sync.js
+    schedule: "0 * * * *" # Run hourly
+    envVars:
+      - key: RUN_AS_SCHEDULED_JOB
+        value: "true"
+      - key: SYNC_INTERVAL
+        value: "3600000"
+      - key: MONGODB_URI
+        sync: false # This should be set manually in the Render dashboard for security 
+ 
+ 

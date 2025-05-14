@@ -1,205 +1,421 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { products } from '../data/products';
-import { ShoppingCart } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import axios from 'axios';
+import { useCart } from '../contexts/CartContext';
+import { ShoppingCart, ArrowLeft, Star, Check, Info, Truck } from 'lucide-react';
+import { products } from '../data/products'; // Import local product data as fallback
 
-interface CustomizationOptions {
-  size: {
-    name: string;
-    dimensions: string;
-    price: number;
-  };
-  paper: {
+interface Product {
+  _id: string;
     name: string;
     description: string;
     price: number;
+  imageUrl: string;
+  category: string;
+  inStock: boolean;
+  discount?: number;
+  reviews?: Array<{
+    id: string;
+    user: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }>;
+  details?: {
+    dimensions?: string;
+    material?: string;
+    care?: string;
   };
-  frame: {
-    name: string;
-    description: string;
-    price: number;
-  } | null;
 }
 
+// Poster size options with their prices
 const sizeOptions = [
-  { name: 'Small', dimensions: '12" x 16"', price: 0 },
-  { name: 'Medium', dimensions: '18" x 24"', price: 200 },
-  { name: 'Large', dimensions: '24" x 36"', price: 400 },
-  { name: 'Extra Large', dimensions: '36" x 48"', price: 600 },
+  { id: 'a4', name: 'A4', dimensions: '21 × 29.7 cm', priceMultiplier: 1 },
+  { id: 'a3', name: 'A3', dimensions: '29.7 × 42 cm', priceMultiplier: 1.5 },
+  { id: '13x19', name: '13×19 inches', dimensions: '33 × 48.3 cm', priceMultiplier: 2 }
 ];
 
-const paperOptions = [
-  { name: 'Standard', description: 'High-quality matte paper', price: 0 },
-  { name: 'Premium', description: 'Enhanced color reproduction', price: 100 },
-  { name: 'Lustre', description: 'Semi-gloss finish', price: 150 },
-  { name: 'Canvas', description: 'Premium canvas print', price: 300 },
-];
-
-const frameOptions = [
-  { name: 'No Frame', description: 'Print only', price: 0 },
-  { name: 'Basic Black', description: 'Simple black frame', price: 500 },
-  { name: 'Premium Wood', description: 'Natural wood frame', price: 800 },
-  { name: 'Metal Frame', description: 'Modern metal frame', price: 1000 },
-];
+// Mock data to use when we can't find the real product
+const createMockProduct = (id: string) => {
+  // Find any product from our local data to use as a base
+  const localProduct = products[0] || {
+    id: id,
+    name: 'Sample Poster',
+    description: 'A beautiful poster for your wall.',
+    price: 79,
+    image: '/placeholder.jpg',
+    category: 'Poster'
+  };
+  
+  return {
+    _id: id,
+    name: localProduct.name,
+    description: localProduct.description,
+    price: 79, // Fixed price for all posters
+    imageUrl: localProduct.image,
+    category: localProduct.category,
+    inStock: true,
+    details: {
+      material: "Premium glossy paper",
+      care: "Keep away from direct sunlight"
+    }
+  };
+};
 
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { dispatch } = useCart();
-  const product = products.find(p => p.id === id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState(sizeOptions[0]);
+  const { addToCart } = useCart();
 
-  const [customization, setCustomization] = useState<CustomizationOptions>({
-    size: sizeOptions[1], // Default to Medium
-    paper: paperOptions[0], // Default to Standard
-    frame: frameOptions[0], // Default to No Frame
-  });
+  useEffect(() => {
+    fetchProduct();
+  }, [id]);
 
-  if (!product) {
-    return <div>Product not found</div>;
-  }
+  const fetchProduct = async () => {
+    if (!id) {
+      setError('No product ID provided');
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Try to fetch from API first
+      try {
+        console.log('Fetching product details from API:', id);
+        const response = await axios.get(`http://localhost:5000/api/products/${id}`);
+        console.log('API response:', response.data);
+        setProduct(response.data);
+        setError(null);
+        return;
+      } catch (apiErr) {
+        console.error('API fetch failed:', apiErr);
+        
+        if (axios.isAxiosError(apiErr) && apiErr.response) {
+          // Get detailed error message from the API
+          console.error('API error details:', apiErr.response.data);
+          
+          if (apiErr.response.status === 404) {
+            console.warn('Product not found in database, falling back to mock data');
+            // Create a mock product with the ID
+            const mockProduct = createMockProduct(id);
+            setProduct(mockProduct);
+            setError(null);
+            return;
+          } else {
+            // For 500 or other errors, show the actual error from the server
+            const errorMsg = apiErr.response.data.error || 'Unknown server error';
+            const errorDetails = apiErr.response.data.details || '';
+            setError(`Server error: ${errorMsg}${errorDetails ? ` (${errorDetails})` : ''}`);
+            return;
+          }
+        }
+        
+        // Fallback to mock data for network errors or other issues
+        console.warn('Network error or other issue, falling back to mock data');
+        const mockProduct = createMockProduct(id);
+        setProduct(mockProduct);
+        setError(null);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to fetch product details: ${errorMessage}`);
+      console.error('Error in product details component:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const calculateTotal = () => {
-    const basePrice = product.price;
-    const sizePrice = customization.size.price;
-    const paperPrice = customization.paper.price;
-    const framePrice = customization.frame?.price || 0;
-    return basePrice + sizePrice + paperPrice + framePrice;
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (value > 0) {
+      setQuantity(value);
+    }
+  };
+
+  const handleSizeChange = (size: typeof sizeOptions[0]) => {
+    setSelectedSize(size);
   };
 
   const handleAddToCart = () => {
-    const totalPrice = calculateTotal();
-    dispatch({
-      type: 'ADD_ITEM',
-      payload: {
-        id: `${product.id}-${customization.size.name}-${customization.paper.name}-${customization.frame?.name || 'noframe'}`,
-        name: `${product.name} (${customization.size.name})`,
-        price: totalPrice,
-        image: product.image,
-        description: `${product.description} | Size: ${customization.size.dimensions} | Paper: ${customization.paper.name} | Frame: ${customization.frame?.name || 'No Frame'}`,
-        quantity: 1
-      }
-    });
-    navigate('/cart');
+    if (product) {
+      // Include the selected size and calculated price
+      addToCart(product._id, quantity, {
+        size: selectedSize.name,
+        dimensions: selectedSize.dimensions,
+        priceModifier: selectedSize.priceMultiplier
+      });
+      
+      // Add success feedback
+      alert('Added to cart successfully!');
+    }
   };
 
+  // Calculate final price based on size and any discounts
+  const calculatePrice = () => {
+    if (!product) return 0;
+    
+    const basePrice = product.price * selectedSize.priceMultiplier;
+    
+    if (product.discount) {
+      return basePrice * (1 - product.discount / 100);
+    }
+    
+    return basePrice;
+  };
+
+  // Calculate average rating from reviews
+  const averageRating = () => {
+    if (!product?.reviews || product.reviews.length === 0) return 0;
+    
+    const sum = product.reviews.reduce((acc, review) => acc + review.rating, 0);
+    return sum / product.reviews.length;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="text-red-500 text-xl mb-4">{error || 'Product not found'}</div>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-blue-500 hover:text-blue-600"
+        >
+          <ArrowLeft size={20} className="mr-2" />
+          Back to Products
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center text-neutral-600 hover:text-neutral-800 mb-8"
+      >
+        <ArrowLeft size={20} className="mr-2" />
+        Back to Products
+      </button>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Product Image */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-lg flex items-center justify-center p-8">
+        <div className="relative aspect-[3/4] bg-neutral-50">
             <img
-              src={product.image}
+            src={product.imageUrl}
               alt={product.name}
-              className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null; // Prevent infinite loop
+              target.src = '/placeholder.jpg'; // Fallback image
+            }}
             />
           </div>
 
-          {/* Product Details and Customization */}
-          <div className="space-y-8">
+        {/* Product Info */}
+        <div className="space-y-6">
             <div>
-              <h1 className="text-4xl font-light text-gray-800 mb-2">
-                {product.name}
-              </h1>
-              <p className="text-xl text-gray-600">{product.description}</p>
+            <div className="flex flex-wrap items-center mb-2">
+              <h1 className="text-3xl font-bold text-neutral-900 mr-3">{product.name}</h1>
+              {product.discount && (
+                <span className="bg-red-100 text-red-700 text-sm font-semibold px-2.5 py-0.5 rounded">
+                  {product.discount}% OFF
+                </span>
+              )}
+            </div>
+            
+            {/* Product rating */}
+            {product.reviews && product.reviews.length > 0 && (
+              <div className="flex items-center mb-4">
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star 
+                      key={star}
+                      size={16} 
+                      className={star <= Math.round(averageRating()) 
+                        ? "text-yellow-400 fill-yellow-400" 
+                        : "text-gray-300"
+                      }
+                    />
+                  ))}
+                </div>
+                <span className="ml-2 text-sm text-gray-600">
+                  ({product.reviews.length} {product.reviews.length === 1 ? 'review' : 'reviews'})
+                </span>
+              </div>
+            )}
+            
+            {/* Price display with discount if applicable */}
+            <div className="mb-4">
+              {product.discount ? (
+                <div className="flex items-center">
+                  <p className="text-2xl font-semibold text-neutral-900">
+                    ₹{calculatePrice().toFixed(2)}
+                  </p>
+                  <p className="ml-2 text-lg text-gray-500 line-through">
+                    ₹{(product.price * selectedSize.priceMultiplier).toFixed(2)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-2xl font-semibold text-neutral-900">
+                  ₹{calculatePrice().toFixed(2)}
+                </p>
+              )}
+              <p className="text-sm text-gray-500 mt-1">Taxes included</p>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-900 mb-2">Description</h2>
+            <p className="text-neutral-600">{product.description}</p>
             </div>
 
             {/* Size Selection */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-medium text-gray-800">Select Size</h2>
-              <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-900 mb-3">Size</h2>
+            <div className="grid grid-cols-3 gap-3">
                 {sizeOptions.map((size) => (
                   <button
-                    key={size.name}
-                    onClick={() => setCustomization(prev => ({ ...prev, size }))}
-                    className={`p-4 border rounded-lg text-left transition-all ${
-                      customization.size.name === size.name
-                        ? 'border-gray-900 bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="font-medium text-gray-800">{size.name}</div>
-                    <div className="text-sm text-gray-600">{size.dimensions}</div>
-                    {size.price > 0 && (
-                      <div className="text-sm font-medium text-gray-900 mt-1">
-                        +₹{size.price}
-                      </div>
+                  key={size.id}
+                  type="button"
+                  onClick={() => handleSizeChange(size)}
+                  className={`border rounded-md py-3 px-3 flex items-center justify-center text-sm font-medium ${
+                    selectedSize.id === size.id
+                      ? 'border-neutral-900 bg-neutral-900 text-white'
+                      : 'border-gray-200 text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>{size.name}</span>
+                  {selectedSize.id === size.id && (
+                    <Check className="ml-1 h-4 w-4" />
                     )}
                   </button>
                 ))}
               </div>
+            <p className="text-sm text-gray-500 mt-2">
+              {selectedSize.dimensions}
+            </p>
             </div>
 
-            {/* Paper Selection */}
             <div className="space-y-4">
-              <h2 className="text-2xl font-medium text-gray-800">Paper Type</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {paperOptions.map((paper) => (
+            {/* Quantity Selector */}
+            <div>
+              <label htmlFor="quantity" className="block text-sm font-medium text-neutral-900 mb-2">
+                Quantity
+              </label>
+              <div className="flex items-center">
+                <button 
+                  className="w-10 h-10 border border-r-0 border-gray-300 rounded-l-md flex items-center justify-center hover:bg-gray-50"
+                  onClick={() => quantity > 1 && setQuantity(quantity - 1)}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  id="quantity"
+                  min="1"
+                  value={quantity}
+                  onChange={handleQuantityChange}
+                  className="w-16 h-10 text-center border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
                   <button
-                    key={paper.name}
-                    onClick={() => setCustomization(prev => ({ ...prev, paper }))}
-                    className={`p-4 border rounded-lg text-left transition-all ${
-                      customization.paper.name === paper.name
-                        ? 'border-gray-900 bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="font-medium text-gray-800">{paper.name}</div>
-                    <div className="text-sm text-gray-600">{paper.description}</div>
-                    {paper.price > 0 && (
-                      <div className="text-sm font-medium text-gray-900 mt-1">
-                        +₹{paper.price}
-                      </div>
-                    )}
+                  className="w-10 h-10 border border-l-0 border-gray-300 rounded-r-md flex items-center justify-center hover:bg-gray-50"
+                  onClick={() => setQuantity(quantity + 1)}
+                >
+                  +
                   </button>
-                ))}
               </div>
             </div>
 
-            {/* Frame Selection */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-medium text-gray-800">Frame Options</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {frameOptions.map((frame) => (
-                  <button
-                    key={frame.name}
-                    onClick={() => setCustomization(prev => ({ ...prev, frame: frame.name === 'No Frame' ? null : frame }))}
-                    className={`p-4 border rounded-lg text-left transition-all ${
-                      (customization.frame?.name === frame.name || (!customization.frame && frame.name === 'No Frame'))
-                        ? 'border-gray-900 bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="font-medium text-gray-800">{frame.name}</div>
-                    <div className="text-sm text-gray-600">{frame.description}</div>
-                    {frame.price > 0 && (
-                      <div className="text-sm font-medium text-gray-900 mt-1">
-                        +₹{frame.price}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
+            {/* Shipping Info */}
+            <div className="flex items-center text-sm text-gray-600">
+              <Truck size={16} className="mr-2" />
+              <span>Shipping calculated at checkout</span>
             </div>
 
-            {/* Total Price and Add to Cart */}
-            <div className="pt-8 border-t">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-2xl font-medium text-gray-800">Total Price</span>
-                <span className="text-3xl font-bold text-gray-900">₹{calculateTotal()}</span>
-              </div>
-              <button
-                onClick={handleAddToCart}
-                className="w-full bg-black text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-              >
-                <ShoppingCart size={24} />
-                Add to Cart
-              </button>
-            </div>
+            {/* Add to Cart Button */}
+                  <button
+              onClick={handleAddToCart}
+              disabled={!product.inStock}
+              className={`w-full flex items-center justify-center px-6 py-3 rounded-md ${
+                product.inStock
+                  ? 'bg-neutral-900 text-white hover:bg-neutral-800 transition-colors'
+                  : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+              }`}
+            >
+              <ShoppingCart size={20} className="mr-2" />
+              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+            </button>
           </div>
+
+          {/* Product Details */}
+          {product.details && (
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h2 className="text-lg font-semibold text-neutral-900 mb-4">Product Details</h2>
+              <div className="space-y-4">
+                {product.details.material && (
+                  <div>
+                    <h3 className="text-sm font-medium text-neutral-900">Material</h3>
+                    <p className="text-neutral-600">{product.details.material}</p>
+                  </div>
+                )}
+                {product.details.care && (
+                  <div>
+                    <h3 className="text-sm font-medium text-neutral-900">Care Instructions</h3>
+                    <p className="text-neutral-600">{product.details.care}</p>
+                      </div>
+                    )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Reviews Section */}
+      {product.reviews && product.reviews.length > 0 && (
+        <div className="mt-16 border-t border-gray-200 pt-10">
+          <h2 className="text-2xl font-bold text-neutral-900 mb-6">Customer Reviews</h2>
+          
+          <div className="space-y-8">
+            {product.reviews.map((review) => (
+              <div key={review.id} className="border-b border-gray-200 pb-6">
+                <div className="flex items-center mb-2">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star 
+                        key={star}
+                        size={16} 
+                        className={star <= review.rating 
+                          ? "text-yellow-400 fill-yellow-400" 
+                          : "text-gray-300"
+                        }
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-2 font-medium">{review.user}</span>
+                  <span className="mx-2 text-gray-300">•</span>
+                  <span className="text-sm text-gray-500">{new Date(review.date).toLocaleDateString()}</span>
+                </div>
+                <p className="text-neutral-600">{review.comment}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

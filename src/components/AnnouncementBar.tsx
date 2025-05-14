@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Tag, X } from 'lucide-react';
 
-const AnnouncementBar: React.FC = () => {
+interface AnnouncementBarProps {
+  onClose: () => void;
+}
+
+const AnnouncementBar: React.FC<AnnouncementBarProps> = ({ onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -15,10 +19,15 @@ const AnnouncementBar: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleClose = () => {
+    setIsVisible(false);
+    onClose();
+  };
+
   if (!isVisible) return null;
 
   return (
-    <div className="bg-secondary-500 text-white py-2 relative shadow-sm">
+    <div className="fixed top-0 left-0 right-0 z-[60] bg-secondary-500 text-white py-2 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-center">
           <Tag size={16} className="mr-2" />
@@ -30,7 +39,7 @@ const AnnouncementBar: React.FC = () => {
             <span className="hidden sm:inline ml-2 text-white/80 text-xs">Use code at checkout</span>
           </p>
           <button 
-            onClick={() => setIsVisible(false)}
+            onClick={handleClose}
             className="absolute right-4 text-white/70 hover:text-white transition-colors"
             aria-label="Close announcement"
           >

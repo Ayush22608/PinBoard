@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LoadingScreenProps {
-  onComplete: () => void;
+  onComplete?: () => void;
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
@@ -16,7 +16,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
         if (newProgress >= 100) {
           clearInterval(interval);
           // Allow the final animations to play before completing
-          setTimeout(() => onComplete(), 800);
+          setTimeout(() => onComplete && onComplete(), 800);
           return 100;
         }
         return newProgress;
