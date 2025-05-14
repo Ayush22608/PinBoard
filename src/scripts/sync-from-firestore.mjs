@@ -17,6 +17,21 @@ const firebaseConfig = {
   measurementId: "G-7X7PPMEC12"
 };
 
+// Helper function to map categories
+function mapCategory(category) {
+  if (!category) return 'movies';
+  
+  const categoryMap = {
+    'shows': 'tv-shows',
+    'music': 'movies',
+    'sports': 'movies',
+    'motivation': 'movies',
+    'games': 'anime',
+  };
+  
+  return categoryMap[category] || category;
+}
+
 async function sync() {
   try {
     // Initialize Firebase
@@ -103,14 +118,15 @@ async function sync() {
               category: category
             }).save();
             
-            // Create in server collection
+            // Create in server collection with category mapping
+            const mappedCategory = mapCategory(category);
             await new ServerProduct({
               customId: productId,
               name: name,
               description: description,
               price: price,
               imageUrl: image,
-              category: category,
+              category: mappedCategory,
               inStock: true
             }).save();
             
@@ -154,250 +170,6 @@ async function sync() {
     mongoose.connection.close();
     process.exit(1);
   }
-}
-
-// Run the sync
-sync(); 
-    console.log(`Found ${snapshot.size} products in Firestore`);
-    
-    // Import each product to MongoDB
-    let count = 0;
-    for (const doc of snapshot.docs) {
-      const firestoreProduct = doc.data();
-      const productId = doc.id;
-      
-      console.log(`Importing: ${firestoreProduct.name} (${productId})`);
-      
-      // Create in main collection
-      await new Product({
-        customId: productId,
-        name: firestoreProduct.name,
-        description: firestoreProduct.description,
-        price: firestoreProduct.price,
-        image: firestoreProduct.image || firestoreProduct.imageUrl,
-        category: firestoreProduct.category
-      }).save();
-      
-      // Create in server collection
-      const category = mapCategory(firestoreProduct.category);
-      await new ServerProduct({
-        customId: productId,
-        name: firestoreProduct.name,
-        description: firestoreProduct.description,
-        price: firestoreProduct.price,
-        imageUrl: firestoreProduct.image || firestoreProduct.imageUrl,
-        category: category,
-        inStock: true
-      }).save();
-      
-      count++;
-    }
-    
-    console.log(`Successfully imported ${count} products from Firestore to MongoDB`);
-    process.exit(0);
-  } catch (error) {
-    console.error('Error syncing products:', error);
-    process.exit(1);
-  }
-}
-
-// Helper function to map categories
-function mapCategory(category) {
-  if (!category) return 'movies';
-  
-  const categoryMap = {
-    'shows': 'tv-shows',
-    'music': 'movies',
-    'sports': 'movies',
-    'motivation': 'movies',
-    'games': 'anime',
-  };
-  
-  return categoryMap[category] || category;
-}
-
-// Run the sync
-sync(); 
-        console.log('Please ensure your Firestore database has products and verify the collection name.');
-      }
-      
-      // List all imported products
-      const allProducts = await Product.find({});
-      console.log('\nImported products:');
-      if (allProducts.length > 0) {
-        allProducts.forEach((product, i) => {
-          console.log(`[${i+1}] ${product.name} (${product.category}) - $${product.price}`);
-        });
-      } else {
-        console.log('No products were imported to MongoDB.');
-      }
-      
-    } catch (firestoreError) {
-      console.error('Error accessing Firestore:', firestoreError);
-      console.log('\nPlease check that:');
-      console.log('1. Your Firebase configuration is correct');
-      console.log('2. You have products in your Firestore collections');
-      console.log('3. You have the necessary permissions to access the Firestore database');
-    }
-    
-    mongoose.connection.close();
-  } catch (error) {
-    console.error('Error syncing products:', error);
-    mongoose.connection.close();
-    process.exit(1);
-  }
-}
-
-// Run the sync
-sync(); 
-    console.log(`Found ${snapshot.size} products in Firestore`);
-    
-    // Import each product to MongoDB
-    let count = 0;
-    for (const doc of snapshot.docs) {
-      const firestoreProduct = doc.data();
-      const productId = doc.id;
-      
-      console.log(`Importing: ${firestoreProduct.name} (${productId})`);
-      
-      // Create in main collection
-      await new Product({
-        customId: productId,
-        name: firestoreProduct.name,
-        description: firestoreProduct.description,
-        price: firestoreProduct.price,
-        image: firestoreProduct.image || firestoreProduct.imageUrl,
-        category: firestoreProduct.category
-      }).save();
-      
-      // Create in server collection
-      const category = mapCategory(firestoreProduct.category);
-      await new ServerProduct({
-        customId: productId,
-        name: firestoreProduct.name,
-        description: firestoreProduct.description,
-        price: firestoreProduct.price,
-        imageUrl: firestoreProduct.image || firestoreProduct.imageUrl,
-        category: category,
-        inStock: true
-      }).save();
-      
-      count++;
-    }
-    
-    console.log(`Successfully imported ${count} products from Firestore to MongoDB`);
-    process.exit(0);
-  } catch (error) {
-    console.error('Error syncing products:', error);
-    process.exit(1);
-  }
-}
-
-// Helper function to map categories
-function mapCategory(category) {
-  if (!category) return 'movies';
-  
-  const categoryMap = {
-    'shows': 'tv-shows',
-    'music': 'movies',
-    'sports': 'movies',
-    'motivation': 'movies',
-    'games': 'anime',
-  };
-  
-  return categoryMap[category] || category;
-}
-
-// Run the sync
-sync(); 
-        console.log('Please ensure your Firestore database has products and verify the collection name.');
-      }
-      
-      // List all imported products
-      const allProducts = await Product.find({});
-      console.log('\nImported products:');
-      if (allProducts.length > 0) {
-        allProducts.forEach((product, i) => {
-          console.log(`[${i+1}] ${product.name} (${product.category}) - $${product.price}`);
-        });
-      } else {
-        console.log('No products were imported to MongoDB.');
-      }
-      
-    } catch (firestoreError) {
-      console.error('Error accessing Firestore:', firestoreError);
-      console.log('\nPlease check that:');
-      console.log('1. Your Firebase configuration is correct');
-      console.log('2. You have products in your Firestore collections');
-      console.log('3. You have the necessary permissions to access the Firestore database');
-    }
-    
-    mongoose.connection.close();
-  } catch (error) {
-    console.error('Error syncing products:', error);
-    mongoose.connection.close();
-    process.exit(1);
-  }
-}
-
-// Run the sync
-sync(); 
-    console.log(`Found ${snapshot.size} products in Firestore`);
-    
-    // Import each product to MongoDB
-    let count = 0;
-    for (const doc of snapshot.docs) {
-      const firestoreProduct = doc.data();
-      const productId = doc.id;
-      
-      console.log(`Importing: ${firestoreProduct.name} (${productId})`);
-      
-      // Create in main collection
-      await new Product({
-        customId: productId,
-        name: firestoreProduct.name,
-        description: firestoreProduct.description,
-        price: firestoreProduct.price,
-        image: firestoreProduct.image || firestoreProduct.imageUrl,
-        category: firestoreProduct.category
-      }).save();
-      
-      // Create in server collection
-      const category = mapCategory(firestoreProduct.category);
-      await new ServerProduct({
-        customId: productId,
-        name: firestoreProduct.name,
-        description: firestoreProduct.description,
-        price: firestoreProduct.price,
-        imageUrl: firestoreProduct.image || firestoreProduct.imageUrl,
-        category: category,
-        inStock: true
-      }).save();
-      
-      count++;
-    }
-    
-    console.log(`Successfully imported ${count} products from Firestore to MongoDB`);
-    process.exit(0);
-  } catch (error) {
-    console.error('Error syncing products:', error);
-    process.exit(1);
-  }
-}
-
-// Helper function to map categories
-function mapCategory(category) {
-  if (!category) return 'movies';
-  
-  const categoryMap = {
-    'shows': 'tv-shows',
-    'music': 'movies',
-    'sports': 'movies',
-    'motivation': 'movies',
-    'games': 'anime',
-  };
-  
-  return categoryMap[category] || category;
 }
 
 // Run the sync
